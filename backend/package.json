@@ -1,0 +1,42 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run build && NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
+    "test:weekly": "npm run build && WEEKLY_INTEGRATION=1 NODE_OPTIONS=--experimental-vm-modules jest --runInBand --runTestsByPath dist/services/weeklyFinalizer.integration.test.js",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "seed": "tsx src/scripts/seed.ts",
+    "weekly:setup": "tsx src/scripts/setupWeeklyTables.ts",
+    "weekly:finalize": "tsx src/scripts/finalizeWeekly.ts",
+    "worker": "tsx watch src/workers/earnWorker.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.0.1",
+    "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.20.0",
+    "jest": "^30.4.2",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "bullmq": "^5.79.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "ioredis": "^5.11.1",
+    "mongodb": "^7.3.0",
+    "node-cron": "^4.5.0",
+    "pg": "^8.22.0"
+  }
+}
