@@ -67,8 +67,14 @@
   font-weight: 600;
 }
 
-.lb-pool-card {
+.lb-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
   margin: 18px 24px;
+}
+
+.lb-metric {
   padding: 16px 18px;
   border: 1px solid rgba(var(--lb-accent-rgb), 0.48);
   border-radius: 8px;
@@ -76,7 +82,7 @@
   box-shadow: inset 3px 0 0 var(--lb-accent);
 }
 
-.lb-pool-card__label {
+.lb-metric__label {
   margin: 0 0 4px;
   color: var(--lb-accent);
   font-size: 13px;
@@ -85,7 +91,7 @@
   text-transform: uppercase;
 }
 
-.lb-pool-card__value {
+.lb-metric__value {
   margin: 0;
   color: var(--lb-text);
   font-size: 24px;
@@ -96,7 +102,7 @@
 .lb-list-header,
 .lb-row {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) minmax(96px, auto);
+  grid-template-columns: 72px minmax(0, 1fr) minmax(96px, auto) minmax(88px, auto);
   align-items: center;
   gap: 12px;
 }
@@ -179,12 +185,17 @@
   white-space: nowrap;
 }
 
-.lb-row__score {
+.lb-row__score,
+.lb-row__reward {
   justify-self: end;
   color: var(--lb-text);
   font-variant-numeric: tabular-nums;
   font-size: 15px;
   font-weight: 800;
+}
+
+.lb-row__reward {
+  color: var(--lb-accent);
 }
 
 .lb-self-card {
@@ -294,7 +305,7 @@
     font-size: 24px;
   }
 
-  .lb-pool-card,
+  .lb-metrics,
   .lb-list-header,
   .lb-list,
   .lb-self-card {
@@ -308,7 +319,7 @@
 
   .lb-list-header,
   .lb-row {
-    grid-template-columns: 52px minmax(0, 1fr) minmax(76px, auto);
+    grid-template-columns: 44px minmax(0, 1fr) minmax(64px, auto) minmax(62px, auto);
     gap: 8px;
   }
 
@@ -316,8 +327,21 @@
     padding: 0 10px;
   }
 
+  .lb-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .lb-metric {
+    padding: 14px 16px;
+  }
+
+  .lb-metric__value {
+    font-size: 21px;
+  }
+
   .lb-row__name,
-  .lb-row__score {
+  .lb-row__score,
+  .lb-row__reward {
     font-size: 14px;
   }
 }

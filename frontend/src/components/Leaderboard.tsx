@@ -9,8 +9,6 @@ export interface LeaderboardProps {
   isLoading: boolean;
   error: string | null;
   onRetry?: () => void;
-  weekEndsAt?: string;
-  rewardPoolTotal?: number;
 }
 
 interface TopPlayerRowProps {
@@ -25,6 +23,10 @@ const EMPTY_PLAYERS: PlayerRank[] = [];
 
 function formatScore(score: number): string {
   return score.toLocaleString();
+}
+
+function formatReward(rewardAmount: number | null): string {
+  return rewardAmount === null ? "-" : rewardAmount.toLocaleString();
 }
 
 function medalClass(rank: number): string {
@@ -57,6 +59,9 @@ function PlayerRow({
       <span className="lb-row__rank">{player.rank}</span>
       <span className="lb-row__name">{isCurrentUser ? "you" : player.userId}</span>
       <span className="lb-row__score">{formatScore(player.score)}</span>
+      <span className="lb-row__reward">
+        {formatReward(player.estimatedRewardAmount)}
+      </span>
     </div>
   );
 }
@@ -134,8 +139,6 @@ function LeaderboardComponent({
   isLoading,
   error,
   onRetry,
-  weekEndsAt,
-  rewardPoolTotal,
 }: LeaderboardProps) {
   const topPlayers = data?.topPlayers ?? EMPTY_PLAYERS;
   const rowProps = useMemo(
@@ -159,13 +162,21 @@ function LeaderboardComponent({
           <p className="lb-header__eyebrow">Weekly leaderboard</p>
           <h1 className="lb-header__title">Top players</h1>
         </div>
-        {weekEndsAt && <p className="lb-header__meta">Resets {weekEndsAt}</p>}
+        {data && <p className="lb-header__meta">{data.weekId}</p>}
       </div>
 
-      {rewardPoolTotal !== undefined && (
-        <div className="lb-pool-card">
-          <p className="lb-pool-card__label">Prize pool</p>
-          <p className="lb-pool-card__value">{formatScore(rewardPoolTotal)}</p>
+      {data && (
+        <div className="lb-metrics">
+          <div className="lb-metric">
+            <p className="lb-metric__label">Prize pool</p>
+            <p className="lb-metric__value">{formatScore(data.prizePoolAmount)}</p>
+          </div>
+          <div className="lb-metric">
+            <p className="lb-metric__label">Weekly earned</p>
+            <p className="lb-metric__value">
+              {formatScore(data.totalWeeklyEarned)}
+            </p>
+          </div>
         </div>
       )}
 
@@ -173,6 +184,7 @@ function LeaderboardComponent({
         <span>Rank</span>
         <span>Player</span>
         <span>Score</span>
+        <span>Reward</span>
       </div>
 
       <List

@@ -4,8 +4,10 @@ import { redis } from "./config/redis.js";
 import { getMongoDb, mongoClient } from "./config/mongo.js";
 import { pgPool, testPostgresConnection } from "./config/postgres.js";
 import { earnQueue } from "./queues/earnQueues.js";
+import { demoRouter } from "./routes/demo.js";
 import { earnRouter } from "./routes/earn.js";
 import { leaderboardRouter } from "./routes/leaderboard.js";
+import { weeklyRouter } from "./routes/weekly.js";
 const app = express();
 const port = Number(process.env.PORT || 3000);
 
@@ -18,6 +20,8 @@ app.get("/health", (_req, res) => {
 
 app.use("/api", leaderboardRouter);
 app.use("/api", earnRouter);
+app.use("/api", weeklyRouter);
+app.use("/api", demoRouter);
 
 async function main() {
   await redis.ping();

@@ -7,8 +7,232 @@
   box-sizing: border-box;
 }
 
+.app-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 720px);
+  align-items: start;
+  justify-content: center;
+  gap: 18px;
+  width: min(100%, 1100px);
+  margin: 0 auto;
+}
+
+.app-sidebar {
+  display: grid;
+  gap: 14px;
+}
+
+.demo-panel,
+.snapshot-panel {
+  border: 1px solid var(--panteon-border);
+  border-radius: 8px;
+  background: var(--panteon-ink);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+  color: var(--panteon-paper);
+}
+
+.demo-panel {
+  padding: 18px;
+}
+
+.demo-panel__header,
+.snapshot-panel__header {
+  margin-bottom: 16px;
+}
+
+.demo-panel__eyebrow,
+.snapshot-panel__eyebrow {
+  margin: 0 0 4px;
+  color: var(--panteon-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.demo-panel__title,
+.snapshot-panel__title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.15;
+  font-weight: 800;
+}
+
+.demo-field {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.demo-field__label {
+  color: var(--panteon-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.demo-field__input {
+  min-height: 42px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--panteon-border);
+  border-radius: 7px;
+  background: var(--panteon-black);
+  color: var(--panteon-paper);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  box-sizing: border-box;
+}
+
+.demo-field__input:focus {
+  border-color: var(--panteon-orange);
+  outline: 3px solid rgba(245, 130, 32, 0.18);
+}
+
+.demo-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 16px 0 10px;
+}
+
+.demo-button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--panteon-border);
+  border-radius: 7px;
+  background: var(--panteon-ink-soft);
+  color: var(--panteon-paper);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.demo-button--primary {
+  border-color: var(--panteon-orange-hover);
+  background: var(--panteon-orange);
+  color: var(--panteon-white);
+}
+
+.demo-button--secondary {
+  width: 100%;
+  margin-bottom: 10px;
+  border-color: rgba(40, 181, 255, 0.42);
+  background: rgba(40, 181, 255, 0.12);
+}
+
+.demo-button--danger {
+  width: 100%;
+  border-color: rgba(234, 51, 51, 0.56);
+  background: rgba(234, 51, 51, 0.16);
+  color: var(--panteon-paper);
+}
+
+.demo-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.demo-button:focus-visible {
+  outline: 3px solid rgba(245, 130, 32, 0.24);
+  outline-offset: 2px;
+}
+
+.demo-panel__message {
+  margin: 12px 0 0;
+  color: var(--panteon-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.snapshot-panel {
+  padding: 18px;
+}
+
+.snapshot-panel__empty {
+  margin: 0;
+  color: var(--panteon-muted);
+  font-size: 14px;
+}
+
+.snapshot-stats {
+  display: grid;
+  gap: 10px;
+}
+
+.snapshot-stats div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(248, 248, 248, 0.08);
+}
+
+.snapshot-stats span {
+  color: var(--panteon-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.snapshot-stats strong {
+  color: var(--panteon-paper);
+  font-size: 14px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.snapshot-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.snapshot-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) minmax(72px, auto);
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 7px;
+  background: var(--panteon-black);
+}
+
+.snapshot-row span {
+  overflow: hidden;
+  color: var(--panteon-muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snapshot-row strong {
+  justify-self: end;
+  color: var(--panteon-orange);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 @media (max-width: 640px) {
   .app-shell {
     padding: 0;
+  }
+
+  .app-layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .app-sidebar {
+    padding: 12px;
+    background: var(--panteon-black);
+  }
+
+  .demo-panel,
+  .snapshot-panel {
+    box-shadow: none;
   }
 }

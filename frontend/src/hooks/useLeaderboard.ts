@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { API_BASE_URL } from "../api";
 import type { LeaderboardRequestState, LeaderboardView } from "../types/leaderboard";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
 function isLeaderboardView(value: unknown): value is LeaderboardView {
   if (!value || typeof value !== "object") {
