@@ -1,75 +1,58 @@
-# React + TypeScript + Vite
+# Panteon Leaderboard Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React, TypeScript and Vite based leaderboard UI for the full stack case.
 
-Currently, two official plugins are available:
+## Frontend Flow
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```mermaid
+flowchart TD
+  App["App.tsx"] --> Hook["useLeaderboard(userId)"]
+  Hook --> Api["GET /api/leaderboard?userId=..."]
+  Api --> Hook
+  Hook --> State{"request state"}
 
-## React Compiler
+  State -->|loading| Loading["LoadingState"]
+  State -->|error| Error["ErrorState + Retry"]
+  State -->|empty| Empty["EmptyState"]
+  State -->|success| Leaderboard["Leaderboard"]
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+  Leaderboard --> Header["Header + prize pool"]
+  Leaderboard --> TopList["Virtualized top players list"]
+  Leaderboard --> Context["Current user context"]
+  TopList --> Row["PlayerRow"]
+  Context --> Row
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Component Notes
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `App.tsx` owns the selected user and passes request state into the leaderboard.
+- `useLeaderboard` keeps API loading, success, empty and error states isolated from UI rendering.
+- `Leaderboard` is prop-driven and renders only the view model it receives.
+- `PlayerRow` is shared by the top list and current user context to keep row styling consistent.
+- `react-window` is isolated inside the leaderboard list. The API normally returns the top 100, but virtualization keeps the component ready for larger result windows without growing DOM cost.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## API Shape Expected By The UI
 
+```ts
+type LeaderboardView = {
+  topPlayers: PlayerRank[];
+  currentUserContext: {
+    self: PlayerRank;
+    above: PlayerRank[];
+    below: PlayerRank[];
+  } | null;
+};
 ```
+
+The frontend expects a bounded response. It should not receive the full player ranking dataset.
+
+## Scripts
+
+```bash
+npm install
+npm run dev
+npm run build
+npm run lint
+```
+
+Set `VITE_API_BASE_URL` when the API is not running at `http://localhost:3000/api`.

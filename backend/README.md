@@ -1,32 +1,83 @@
 # Leaderboard Backend
 
-Node.js/TypeScript backend for the weekly leaderboard case. The stack uses
-Express, Redis, MongoDB, PostgreSQL, and BullMQ.
+Node.js, TypeScript and Express backend for the weekly leaderboard case. The
+system uses Redis, BullMQ, MongoDB and PostgreSQL.
 
-## Core Flow
+## Backend Flow
 
-- `POST /api/events/earn` accepts a demo earn event and enqueues it.
-- The worker assigns the event to the week of `earnedAt`, not the processing time.
-- Redis stores raw weekly scores in a hash and rank-only scores in a sorted set.
-- Equal raw scores are ordered by the earlier timestamp that reached the score.
-- Weekly finalization snapshots the top 100 rewarded players into PostgreSQL and
-  clears the Redis week keys.
+```mermaid
+flowchart TD
+  subgraph WritePath["Write path"]
+    Game["Game client"] --> EarnApi["POST /api/events/earn"]
+    EarnApi --> Queue["BullMQ queue\nRedis-backed"]
+    Queue --> Worker["Earn worker"]
+    Worker --> Lua["Atomic Redis Lua script"]
+    Lua --> LiveRank["Redis sorted set\nlive weekly ranking"]
+    Lua --> RawScores["Redis hash\nraw weekly scores"]
+    Lua --> Counters["Redis counters/sets\ntotal earned + processed events"]
+    Worker --> Mongo["MongoDB\nearn event log"]
+    LiveRank -. weekly cron .-> Finalizer["Weekly finalizer\nRedis lock"]
+    RawScores -. weekly cron .-> Finalizer
+    Counters -. weekly cron .-> Finalizer
+    Finalizer --> Postgres["PostgreSQL\nsnapshot + rewards"]
+    Finalizer --> Cleanup["Clear finalized\nRedis week keys"]
+  end
 
-## Known Scope Boundaries
+  subgraph ReadPath["Read path"]
+    UI["Leaderboard UI"] --> ReadApi["GET /api/leaderboard?userId=..."]
+    ReadApi --> ReadRedis["Redis sorted set\nZREVRANGE + ZREVRANK"]
+    ReadRedis --> View["Bounded JSON view\ntop 100 + user context"]
+    View --> UI
+  end
+```
 
-- `POST /api/events/earn` is intentionally open for the case/demo. A production
-  version should put this endpoint behind trusted game-server ingestion, API key
-  auth, or JWT-based authentication.
-- The finalizer is acceptable for the demo scale. At very large production scale,
-  total earned and participants should continue to come from counters, and any
-  deeper historical/global comparison should avoid scanning massive leaderboards.
-- Wallet crediting after reward calculation is not implemented in this backend.
+## Design Notes
 
-## Useful Commands
+- `POST /api/events/earn` validates the event and enqueues it instead of updating rankings inside the request.
+- BullMQ keeps ingestion resilient while the worker processes earn events asynchronously.
+- Redis is the live leaderboard store. Ranking reads use `ZREVRANGE` and `ZREVRANK`.
+- Earn updates run through a Redis Lua script, so score updates, total counters and duplicate-event checks stay atomic.
+- Raw scores are stored separately from rank scores because rank scores include the tie-break value.
+- MongoDB stores the raw processed earn-event log for audit/debugging.
+- PostgreSQL stores finalized weekly snapshots and calculated reward rows.
+- The API returns a bounded view model: top 100 players, plus the current user's surrounding context when they are outside the top 100.
 
-- `npm test`
-- `npm run test:weekly`
-- `npm run dev`
-- `npm run worker`
-- `npm run weekly:setup`
-- `npm run weekly:finalize`
+## Ranking Rules
+
+- Higher weekly score ranks first.
+- If scores are equal, the player who reached the score earlier ranks higher.
+- Current user context fetches 3 players above and 2 players below the user.
+- Weekly reward pool is 2% of total weekly earned currency.
+- Rewards are calculated only for ranks 1-100 during weekly finalization.
+
+## Runtime Pieces
+
+- API server: Express routes and datastore connectivity checks.
+- Worker: BullMQ consumer for earn events.
+- Weekly scheduler: cron-driven finalizer with a Redis lock.
+- PostgreSQL setup script: creates weekly snapshot tables.
+
+## Environment
+
+```bash
+PORT=3000
+REDIS_URL=redis://localhost:6379
+MONGO_URL=mongodb://localhost:27017
+POSTGRES_URL=postgres://leaderboard:leaderboard@localhost:5432/leaderboard
+WEEKLY_LEADERBOARD_TIMEZONE=Europe/Istanbul
+WEEKLY_FINALIZE_CRON="5 0 * * 1"
+```
+
+## Scripts
+
+```bash
+npm install
+npm run build
+npm test
+npm run dev
+npm run worker
+npm run weekly:setup
+npm run weekly:finalize
+```
+
+Use `docker-compose up -d` to start Redis, PostgreSQL and MongoDB locally.
