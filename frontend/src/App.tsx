@@ -2,7 +2,7 @@ import { Leaderboard } from "./components/Leaderboard";
 import { useLeaderboard } from "./hooks/useLeaderboard";
 import "./App.css";
 
-const DEMO_USER_ID = "user:9";
+const DEMO_USER_ID = "user:19";
 
 function App() {
   const { state, retry } = useLeaderboard(DEMO_USER_ID);

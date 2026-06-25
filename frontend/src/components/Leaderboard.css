@@ -1,22 +1,31 @@
 .lb-container {
-  --lb-text: #18202f;
-  --lb-muted: #6a7280;
-  --lb-border: #dbe2ea;
-  --lb-panel: #ffffff;
-  --lb-panel-soft: #f6f8fb;
-  --lb-blue: #1769ff;
-  --lb-blue-soft: #eaf1ff;
-  --lb-gold: #fff4ca;
-  --lb-silver: #eef2f6;
-  --lb-bronze: #ffe4d2;
+  --lb-text: var(--panteon-paper);
+  --lb-muted: var(--panteon-muted);
+  --lb-border: var(--panteon-border);
+  --lb-panel: var(--panteon-ink);
+  --lb-panel-soft: var(--panteon-black);
+  --lb-accent: var(--panteon-orange);
+  --lb-accent-hover: var(--panteon-orange-hover);
+  --lb-accent-rgb: 245, 130, 32;
+  --lb-accent-soft: rgba(var(--lb-accent-rgb), 0.12);
+  --lb-success: var(--panteon-green);
+  --lb-success-rgb: 16, 223, 172;
+  --lb-danger-rgb: 234, 51, 51;
+  --lb-row-bg: #1e1e1e;
+  --lb-row-fade: rgba(30, 30, 30, 0.94);
+  --lb-gold: rgba(var(--lb-accent-rgb), 0.18);
+  --lb-silver: rgba(248, 248, 248, 0.08);
+  --lb-bronze: rgba(var(--lb-danger-rgb), 0.12);
 
   width: min(100%, 720px);
   min-height: 620px;
   margin: 0 auto;
   border: 1px solid var(--lb-border);
   border-radius: 8px;
-  background: var(--lb-panel);
-  box-shadow: 0 16px 45px rgba(35, 45, 65, 0.12);
+  background:
+    linear-gradient(180deg, rgba(var(--lb-accent-rgb), 0.08), rgba(23, 23, 23, 0) 42%),
+    var(--lb-panel);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
   color: var(--lb-text);
   overflow: hidden;
   text-align: left;
@@ -29,7 +38,7 @@
   gap: 16px;
   padding: 24px 24px 18px;
   border-bottom: 1px solid var(--lb-border);
-  background: linear-gradient(180deg, #fbfcfe 0%, #ffffff 100%);
+  background: linear-gradient(180deg, rgba(var(--lb-accent-rgb), 0.14), rgba(23, 23, 23, 0));
 }
 
 .lb-header__eyebrow {
@@ -61,14 +70,15 @@
 .lb-pool-card {
   margin: 18px 24px;
   padding: 16px 18px;
-  border: 1px solid #cfe0ff;
+  border: 1px solid rgba(var(--lb-accent-rgb), 0.48);
   border-radius: 8px;
-  background: var(--lb-blue-soft);
+  background: var(--lb-accent-soft);
+  box-shadow: inset 3px 0 0 var(--lb-accent);
 }
 
 .lb-pool-card__label {
   margin: 0 0 4px;
-  color: #38527d;
+  color: var(--lb-accent);
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0;
@@ -77,7 +87,7 @@
 
 .lb-pool-card__value {
   margin: 0;
-  color: #0f3f9d;
+  color: var(--lb-text);
   font-size: 24px;
   line-height: 1.1;
   font-weight: 800;
@@ -119,29 +129,35 @@
   padding: 0 12px;
   border: 1px solid transparent;
   border-radius: 7px;
-  background: #fff;
+  background: var(--lb-row-bg);
   box-sizing: border-box;
 }
 
 .lb-row--gold {
-  border-color: #edd277;
-  background: var(--lb-gold);
+  border-color: rgba(var(--lb-accent-rgb), 0.62);
+  background:
+    linear-gradient(90deg, var(--lb-gold), var(--lb-row-fade)),
+    var(--lb-gold);
 }
 
 .lb-row--silver {
-  border-color: #d5dce5;
-  background: var(--lb-silver);
+  border-color: rgba(248, 248, 248, 0.26);
+  background:
+    linear-gradient(90deg, var(--lb-silver), var(--lb-row-fade)),
+    var(--lb-silver);
 }
 
 .lb-row--bronze {
-  border-color: #f0b58d;
-  background: var(--lb-bronze);
+  border-color: rgba(var(--lb-danger-rgb), 0.34);
+  background:
+    linear-gradient(90deg, var(--lb-bronze), var(--lb-row-fade)),
+    var(--lb-bronze);
 }
 
 .lb-row--self {
-  border-color: #6b9dff;
-  background: #edf4ff;
-  box-shadow: inset 3px 0 0 var(--lb-blue);
+  border-color: rgba(var(--lb-success-rgb), 0.5);
+  background: rgba(var(--lb-success-rgb), 0.1);
+  box-shadow: inset 3px 0 0 var(--lb-success);
 }
 
 .lb-row--muted {
@@ -165,7 +181,7 @@
 
 .lb-row__score {
   justify-self: end;
-  color: #293548;
+  color: var(--lb-text);
   font-variant-numeric: tabular-nums;
   font-size: 15px;
   font-weight: 800;
@@ -177,16 +193,16 @@
   z-index: 2;
   margin: 16px 24px 24px;
   padding: 12px;
-  border: 1px solid #c8d8ff;
+  border: 1px solid rgba(var(--lb-accent-rgb), 0.42);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 40px rgba(30, 54, 94, 0.2);
+  background: rgba(23, 23, 23, 0.92);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.36);
   backdrop-filter: blur(10px);
 }
 
 .lb-self-card__label {
   margin: 0 0 8px;
-  color: #38527d;
+  color: var(--lb-accent);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0;
@@ -223,10 +239,10 @@
   margin-top: 18px;
   min-height: 40px;
   padding: 0 18px;
-  border: 1px solid #0f55d8;
+  border: 1px solid var(--lb-accent-hover);
   border-radius: 7px;
-  background: var(--lb-blue);
-  color: #fff;
+  background: var(--lb-accent);
+  color: var(--panteon-white);
   font: inherit;
   font-size: 14px;
   font-weight: 800;
@@ -234,7 +250,7 @@
 }
 
 .lb-retry-button:focus-visible {
-  outline: 3px solid rgba(23, 105, 255, 0.28);
+  outline: 3px solid rgba(var(--lb-accent-rgb), 0.34);
   outline-offset: 2px;
 }
 
@@ -247,7 +263,7 @@
 .lb-skeleton-row {
   height: 44px;
   border-radius: 7px;
-  background: linear-gradient(90deg, #f1f4f8 0%, #e5ebf3 50%, #f1f4f8 100%);
+  background: linear-gradient(90deg, #171717 0%, #2a2a2a 50%, #171717 100%);
   background-size: 200% 100%;
   animation: lb-skeleton 1.2s ease-in-out infinite;
 }
