@@ -4,11 +4,13 @@ import { pgPool } from "../config/postgres.js";
 import { leaderboardKeyForWeek } from "./leaderboardWeek.js";
 import {
   deleteLeaderboardWeekData,
-  displayScoreFromRankScore,
   getRawScoresForUsers,
   leaderboardTotalEarnedKeyForWeek,
-  parseScoredLeaderboardMembers,
 } from "./leaderboardScoring.js";
+import {
+  displayScoreFromRankScore,
+  parseScoredLeaderboardMembers,
+} from "./rankScore.js";
 import {
   calculatePrizePool,
   calculateWeeklyRewards,
@@ -127,11 +129,8 @@ export async function finalizeWeeklyLeaderboard(
         ? await sumLegacyDisplayScores(leaderboardKey)
         : Number(totalWeeklyEarnedRaw);
     const prizePoolAmount = calculatePrizePool(totalWeeklyEarned);
-    const {
-      players,
-      distributedAmount,
-      undistributedAmount,
-    } = calculateWeeklyRewards(topPlayers, prizePoolAmount);
+    const { players, distributedAmount, undistributedAmount } =
+      calculateWeeklyRewards(topPlayers, prizePoolAmount);
 
     const client = await pgPool.connect();
 

@@ -19,24 +19,23 @@ export interface LeaderboardView {
   currentUserContext: CurrentUserContext | null;
 }
 
-export interface WeeklySnapshotPlayer {
-  rank: number;
-  userId: string;
-  score: number;
-  rewardAmount: number;
-}
-
-export interface WeeklySnapshot {
+export interface WeeklySnapshotSummary {
   weekId: string;
-  status: string;
   totalWeeklyEarned: number;
   prizePoolAmount: number;
   distributedAmount: number;
-  undistributedAmount: number;
   playerCount: number;
   participantCount: number;
   finalizedAt: string | null;
-  players: WeeklySnapshotPlayer[];
+}
+
+export interface EarnEventLog {
+  eventId: string;
+  userId: string;
+  amount: number;
+  earnedAt: string;
+  weekId: string;
+  processedAt: string;
 }
 
 export type LeaderboardRequestState =

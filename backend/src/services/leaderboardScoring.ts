@@ -1,9 +1,10 @@
 import { redis } from "../config/redis.js";
 import { leaderboardKeyForWeek } from "./leaderboardWeek.js";
-
-const RANK_SCORE_SCALE = 1_000_000_000_000;
-const TIE_BREAK_EPOCH_CEILING_MS = 10_000_000_000_000;
-const TIE_BREAK_PRECISION_MS = 100;
+import {
+  TIE_BREAK_EPOCH_CEILING_MS,
+  TIE_BREAK_PRECISION_MS,
+  TIE_BREAK_SCORE_SCALE,
+} from "./rankScore.js";
 
 export interface LeaderboardEarnEvent {
   weekId: string;
@@ -18,12 +19,6 @@ export interface LeaderboardEarnResult {
   rawScore: number;
 }
 
-export interface ScoredLeaderboardMember {
-  userId: string;
-  rankScore: number;
-  rank: number;
-}
-
 const APPLY_EARN_SCRIPT = `
   local leaderboardKey = KEYS[1]
   local rawScoresKey = KEYS[2]
@@ -34,7 +29,7 @@ const APPLY_EARN_SCRIPT = `
   local userId = ARGV[2]
   local amount = tonumber(ARGV[3])
   local earnedAt = tonumber(ARGV[4])
-  local rankScoreScale = tonumber(ARGV[5])
+  local tieBreakScoreScale = tonumber(ARGV[5])
   local tieBreakEpochCeilingMs = tonumber(ARGV[6])
   local tieBreakPrecisionMs = tonumber(ARGV[7])
 
@@ -49,7 +44,7 @@ const APPLY_EARN_SCRIPT = `
     tieBreak = 0
   end
 
-  local rankScore = (rawScore * rankScoreScale) + tieBreak
+  local rankScore = rawScore + (tieBreak / tieBreakScoreScale)
 
   redis.call("ZADD", leaderboardKey, rankScore, userId)
   redis.call("INCRBY", totalEarnedKey, amount)
@@ -79,45 +74,6 @@ export function leaderboardKeysForWeek(weekId: string): string[] {
   ];
 }
 
-export function rankScoreForRawScore(
-  rawScore: number,
-  earnedAt: number,
-): number {
-  const tieBreak = Math.max(
-    0,
-    Math.floor(
-      (TIE_BREAK_EPOCH_CEILING_MS - earnedAt) / TIE_BREAK_PRECISION_MS,
-    ),
-  );
-
-  return rawScore * RANK_SCORE_SCALE + tieBreak;
-}
-
-export function displayScoreFromRankScore(rankScore: number): number {
-  if (rankScore >= RANK_SCORE_SCALE) {
-    return Math.floor(rankScore / RANK_SCORE_SCALE);
-  }
-
-  return Math.floor(rankScore);
-}
-
-export function parseScoredLeaderboardMembers(
-  raw: string[],
-  rankOffset = 0,
-): ScoredLeaderboardMember[] {
-  const members: ScoredLeaderboardMember[] = [];
-
-  for (let i = 0; i < raw.length; i += 2) {
-    members.push({
-      userId: raw[i],
-      rankScore: Number(raw[i + 1]),
-      rank: rankOffset + members.length + 1,
-    });
-  }
-
-  return members;
-}
-
 export async function applyEarnToLeaderboard(
   event: LeaderboardEarnEvent,
 ): Promise<LeaderboardEarnResult> {
@@ -132,7 +88,7 @@ export async function applyEarnToLeaderboard(
     event.userId,
     String(event.amount),
     String(event.earnedAt),
-    String(RANK_SCORE_SCALE),
+    String(TIE_BREAK_SCORE_SCALE),
     String(TIE_BREAK_EPOCH_CEILING_MS),
     String(TIE_BREAK_PRECISION_MS),
   );

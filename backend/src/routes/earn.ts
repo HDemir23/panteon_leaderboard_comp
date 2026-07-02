@@ -1,8 +1,22 @@
 import { randomUUID } from "crypto";
 import { Router, Request, Response } from "express";
 import { earnQueue } from "../queues/earnQueues.js";
+import { getRecentEarnEvents } from "../services/earnProcessor.js";
+import { queryLimit } from "./queryLimit.js";
 
 export const earnRouter = Router();
+
+earnRouter.get("/events/recent", async (req: Request, res: Response) => {
+  try {
+    const events = await getRecentEarnEvents(
+      queryLimit(req.query.limit, 50, 100),
+    );
+    res.json({ events });
+  } catch (err) {
+    console.error("[GET /events/recent] failed:", err);
+    res.status(500).json({ error: "failed to load earn events" });
+  }
+});
 
 earnRouter.post("/events/earn", async (req: Request, res: Response) => {
   const rawUserId = req.body?.userId;

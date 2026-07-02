@@ -1,32 +1,22 @@
-import type { WeeklySnapshot } from "./types/leaderboard";
+import type {
+  EarnEventLog,
+  LeaderboardView,
+  WeeklySnapshotSummary,
+} from "./types/leaderboard";
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
-export interface FinalizeWeekResult {
-  status: string;
-  weekId: string;
+function isLeaderboardView(value: unknown): value is LeaderboardView {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  return Array.isArray((value as Partial<LeaderboardView>).topPlayers);
 }
 
-export interface SeedDemoDataResult {
-  weekId: string;
-  playerCount: number;
-}
-
-function postOptions(body: unknown): RequestInit {
-  return {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  };
-}
-
-async function requestJson<T>(
-  path: string,
-  init: RequestInit | undefined,
-  errorPrefix: string,
-): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, init);
+async function requestJson<T>(path: string, errorPrefix: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`);
 
   if (!response.ok) {
     throw new Error(`${errorPrefix} failed with ${response.status}`);
@@ -35,44 +25,34 @@ async function requestJson<T>(
   return (await response.json()) as T;
 }
 
-export async function addLeaderboardPoints(
+export async function getLeaderboardView(
   userId: string,
-  amount: number,
-): Promise<void> {
-  await requestJson<unknown>(
-    "/events/earn",
-    postOptions({ userId, amount }),
-    "Add points",
+): Promise<LeaderboardView> {
+  const params = new URLSearchParams({ userId });
+  const data = await requestJson<unknown>(
+    `/leaderboard?${params.toString()}`,
+    "Leaderboard request",
   );
+
+  if (!isLeaderboardView(data)) {
+    throw new Error("Unexpected leaderboard response");
+  }
+
+  return data;
 }
 
-export async function finalizeCurrentWeek(): Promise<FinalizeWeekResult> {
-  return requestJson<FinalizeWeekResult>(
-    "/weekly/finalize",
-    postOptions({}),
-    "Finalize",
+export async function getRecentEarnEvents(): Promise<EarnEventLog[]> {
+  const data = await requestJson<{ events: EarnEventLog[] }>(
+    "/events/recent?limit=50",
+    "Events request",
   );
+  return data.events;
 }
 
-export async function seedDemoLeaderboard(): Promise<SeedDemoDataResult> {
-  return requestJson<SeedDemoDataResult>(
-    "/demo/seed",
-    postOptions({}),
-    "Seed",
+export async function getWeeklySnapshots(): Promise<WeeklySnapshotSummary[]> {
+  const data = await requestJson<{ snapshots: WeeklySnapshotSummary[] }>(
+    "/weekly/snapshots?limit=12",
+    "Snapshots request",
   );
-}
-
-export async function getWeeklySnapshot(
-  weekId?: string,
-): Promise<WeeklySnapshot | null> {
-  const path = weekId
-    ? `/weekly/snapshots/${encodeURIComponent(weekId)}`
-    : "/weekly/snapshots/latest";
-
-  const data = await requestJson<{ snapshot: WeeklySnapshot | null }>(
-    path,
-    undefined,
-    "Snapshot request",
-  );
-  return data.snapshot;
+  return data.snapshots;
 }

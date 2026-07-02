@@ -9,10 +9,14 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "seed": "tsx src/scripts/seed.ts",
+    "worker": "node dist/workers/earnWorker.js",
+    "worker:dev": "tsx watch src/workers/earnWorker.ts",
+    "simulate": "node dist/scripts/simulate.js",
+    "simulate:dev": "tsx watch src/scripts/simulate.ts",
+    "simulate:once": "node dist/scripts/simulateOnce.js",
+    "simulate:once:dev": "tsx src/scripts/simulateOnce.ts",
     "weekly:setup": "tsx src/scripts/setupWeeklyTables.ts",
-    "weekly:finalize": "tsx src/scripts/finalizeWeekly.ts",
-    "worker": "tsx watch src/workers/earnWorker.ts"
+    "weekly:finalize": "tsx src/scripts/finalizeWeekly.ts"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
