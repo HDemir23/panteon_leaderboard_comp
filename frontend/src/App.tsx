@@ -1,166 +1,270 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  addLeaderboardPoints,
-  finalizeCurrentWeek,
-  getWeeklySnapshot,
-  seedDemoLeaderboard,
-} from "./api";
-import { DemoControls } from "./components/DemoControls";
+import { useEffect, useState } from "react";
+import { getRecentEarnEvents, getWeeklySnapshots } from "./api";
 import { Leaderboard } from "./components/Leaderboard";
-import { SnapshotPanel } from "./components/SnapshotPanel";
 import { useLeaderboard } from "./hooks/useLeaderboard";
-import type { WeeklySnapshot } from "./types/leaderboard";
+import type { EarnEventLog, WeeklySnapshotSummary } from "./types/leaderboard";
 import "./App.css";
 
-function positiveInteger(value: number, fallback: number): number {
-  if (!Number.isFinite(value)) {
-    return fallback;
-  }
+const TRACKED_USER_ID = "user:19";
+const EMPTY_EARN_EVENTS: EarnEventLog[] = [];
+const EMPTY_SNAPSHOTS: WeeklySnapshotSummary[] = [];
 
-  return Math.max(1, Math.floor(value));
+type Route = "leaderboard" | "events" | "finalized";
+
+interface PollingQueryState<T> {
+  data: T;
+  error: string | null;
+  isLoading: boolean;
 }
 
-function App() {
-  const [userNumber, setUserNumber] = useState(19);
-  const [pointsToAdd, setPointsToAdd] = useState(1_000);
-  const [isAddingPoints, setIsAddingPoints] = useState(false);
-  const [isFinalizing, setIsFinalizing] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
-  const [snapshot, setSnapshot] = useState<WeeklySnapshot | null>(null);
-  const [isSnapshotLoading, setIsSnapshotLoading] = useState(true);
-  const [message, setMessage] = useState<string | null>(null);
-  const currentUserId = useMemo(() => `user:${userNumber}`, [userNumber]);
-  const { state, retry } = useLeaderboard(currentUserId);
+function routeFromHash(): Route {
+  if (window.location.hash === "#/events") {
+    return "events";
+  }
 
-  const loadSnapshot = useCallback(async () => {
-    setIsSnapshotLoading(true);
+  if (window.location.hash === "#/finalized") {
+    return "finalized";
+  }
 
-    try {
-      setSnapshot(await getWeeklySnapshot());
-    } catch (err) {
-      setMessage(
-        err instanceof Error ? err.message : "Failed to load weekly snapshot",
-      );
-    } finally {
-      setIsSnapshotLoading(false);
-    }
-  }, []);
+  return "leaderboard";
+}
+
+function formatNumber(value: number): string {
+  return value.toLocaleString();
+}
+
+function formatDate(value: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function usePollingQuery<T>(
+  load: () => Promise<T>,
+  refreshMs: number,
+  initialData: T,
+  fallbackError: string,
+): PollingQueryState<T> {
+  const [data, setData] = useState<T>(() => initialData);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isActive = true;
 
-    void getWeeklySnapshot()
-      .then((nextSnapshot) => {
+    const refresh = async () => {
+      try {
+        const nextData = await load();
+
         if (isActive) {
-          setSnapshot(nextSnapshot);
+          setData(nextData);
+          setError(null);
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         if (isActive) {
-          setMessage(
-            err instanceof Error ? err.message : "Failed to load weekly snapshot",
-          );
+          setError(err instanceof Error ? err.message : fallbackError);
         }
-      })
-      .finally(() => {
+      } finally {
         if (isActive) {
-          setIsSnapshotLoading(false);
+          setIsLoading(false);
         }
-      });
+      }
+    };
+
+    void refresh();
+    const interval =
+      refreshMs > 0 ? window.setInterval(refresh, refreshMs) : null;
 
     return () => {
       isActive = false;
+
+      if (interval !== null) {
+        window.clearInterval(interval);
+      }
+    };
+  }, [fallbackError, load, refreshMs]);
+
+  return { data, error, isLoading };
+}
+
+function AppNav({ route }: { route: Route }) {
+  return (
+    <nav className="app-nav" aria-label="Views">
+      <a className={route === "leaderboard" ? "is-active" : ""} href="#/">
+        Leaderboard
+      </a>
+      <a className={route === "events" ? "is-active" : ""} href="#/events">
+        Events
+      </a>
+      <a
+        className={route === "finalized" ? "is-active" : ""}
+        href="#/finalized"
+      >
+        Finalized weeks
+      </a>
+    </nav>
+  );
+}
+
+function LeaderboardPage() {
+  const { state, retry } = useLeaderboard(TRACKED_USER_ID);
+
+  return (
+    <Leaderboard
+      data={state.status === "success" ? state.data : null}
+      currentUserId={TRACKED_USER_ID}
+      isLoading={state.status === "loading"}
+      error={state.status === "error" ? state.message : null}
+      onRetry={retry}
+    />
+  );
+}
+
+function EventsPage() {
+  const {
+    data: events,
+    error,
+    isLoading,
+  } = usePollingQuery(
+    getRecentEarnEvents,
+    5_000,
+    EMPTY_EARN_EVENTS,
+    "Failed to load events",
+  );
+
+  return (
+    <section className="data-panel" aria-label="Recent earn events">
+      <div className="data-panel__header">
+        <h2>Recent events</h2>
+        <span>{events.length}</span>
+      </div>
+
+      {isLoading && <p className="data-state">Loading events...</p>}
+      {error && <p className="data-state">{error}</p>}
+      {!isLoading && !error && events.length === 0 && (
+        <p className="data-state">No events yet.</p>
+      )}
+
+      {!isLoading && !error && events.length > 0 && (
+        <div className="data-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Amount</th>
+                <th>Week</th>
+                <th>Processed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((event) => (
+                <tr key={event.eventId}>
+                  <td>{event.userId}</td>
+                  <td>{formatNumber(event.amount)}</td>
+                  <td>{event.weekId}</td>
+                  <td>{formatDate(event.processedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function FinalizedWeeksPage() {
+  const {
+    data: snapshots,
+    error,
+    isLoading,
+  } = usePollingQuery(
+    getWeeklySnapshots,
+    15_000,
+    EMPTY_SNAPSHOTS,
+    "Failed to load snapshots",
+  );
+
+  return (
+    <section className="data-panel" aria-label="Finalized weekly snapshots">
+      <div className="data-panel__header">
+        <h2>Finalized weeks</h2>
+        <span>{snapshots.length}</span>
+      </div>
+
+      {isLoading && <p className="data-state">Loading weeks...</p>}
+      {error && <p className="data-state">{error}</p>}
+      {!isLoading && !error && snapshots.length === 0 && (
+        <p className="data-state">No finalized weeks yet.</p>
+      )}
+
+      {!isLoading && !error && snapshots.length > 0 && (
+        <div className="data-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Week</th>
+                <th>Pool</th>
+                <th>Distributed</th>
+                <th>Participants</th>
+                <th>Finalized</th>
+              </tr>
+            </thead>
+            <tbody>
+              {snapshots.map((snapshot) => (
+                <tr key={snapshot.weekId}>
+                  <td>{snapshot.weekId}</td>
+                  <td>{formatNumber(snapshot.prizePoolAmount)}</td>
+                  <td>{formatNumber(snapshot.distributedAmount)}</td>
+                  <td>{formatNumber(snapshot.participantCount)}</td>
+                  <td>{formatDate(snapshot.finalizedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function App() {
+  const [route, setRoute] = useState<Route>(() => routeFromHash());
+
+  useEffect(() => {
+    const syncRoute = () => {
+      setRoute(routeFromHash());
+    };
+
+    window.addEventListener("hashchange", syncRoute);
+    return () => {
+      window.removeEventListener("hashchange", syncRoute);
     };
   }, []);
 
-  const addPoints = useCallback(async () => {
-    setIsAddingPoints(true);
-    setMessage(null);
-
-    try {
-      await addLeaderboardPoints(currentUserId, pointsToAdd);
-      setMessage(
-        `Queued ${pointsToAdd.toLocaleString()} points for ${currentUserId}`,
-      );
-      window.setTimeout(() => {
-        void retry();
-      }, 700);
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Failed to add points");
-    } finally {
-      setIsAddingPoints(false);
-    }
-  }, [currentUserId, pointsToAdd, retry]);
-
-  const finalizeWeek = useCallback(async () => {
-    setIsFinalizing(true);
-    setMessage(null);
-
-    try {
-      const result = await finalizeCurrentWeek();
-      setMessage(`Finalize result: ${result.status} ${result.weekId}`);
-      const finalizedSnapshot = await getWeeklySnapshot(result.weekId);
-      setSnapshot(finalizedSnapshot);
-      await retry();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Failed to finalize week");
-    } finally {
-      setIsFinalizing(false);
-    }
-  }, [retry]);
-
-  const seedDemoData = useCallback(async () => {
-    setIsSeeding(true);
-    setMessage(null);
-
-    try {
-      const result = await seedDemoLeaderboard();
-      setMessage(
-        `Seeded ${result.playerCount.toLocaleString()} players for ${result.weekId}`,
-      );
-      await retry();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Failed to seed data");
-    } finally {
-      setIsSeeding(false);
-    }
-  }, [retry]);
-
   return (
     <main className="app-shell">
-      <div className="app-layout">
-        <aside className="app-sidebar" aria-label="Demo tools">
-          <DemoControls
-            userNumber={userNumber}
-            pointsToAdd={pointsToAdd}
-            isAddingPoints={isAddingPoints}
-            isFinalizing={isFinalizing}
-            isSeeding={isSeeding}
-            message={message}
-            onUserNumberChange={(value) =>
-              setUserNumber((current) => positiveInteger(value, current))
-            }
-            onPointsToAddChange={(value) =>
-              setPointsToAdd((current) => positiveInteger(value, current))
-            }
-            onAddPoints={addPoints}
-            onFinalizeWeek={finalizeWeek}
-            onSeedDemoData={seedDemoData}
-            onRefresh={() => {
-              void retry();
-              void loadSnapshot();
-            }}
-          />
-          <SnapshotPanel snapshot={snapshot} isLoading={isSnapshotLoading} />
-        </aside>
+      <div className="app-frame">
+        <header className="app-header">
+          <div>
+            <p className="app-header__eyebrow">Live leaderboard</p>
+            <h1>Panteon weekly ranking</h1>
+          </div>
+          <p className="app-header__user">{TRACKED_USER_ID}</p>
+        </header>
 
-        <Leaderboard
-          data={state.status === "success" ? state.data : null}
-          currentUserId={currentUserId}
-          isLoading={state.status === "loading"}
-          error={state.status === "error" ? state.message : null}
-          onRetry={retry}
-        />
+        <AppNav route={route} />
+
+        <div className="app-content">
+          {route === "leaderboard" && <LeaderboardPage />}
+          {route === "events" && <EventsPage />}
+          {route === "finalized" && <FinalizedWeeksPage />}
+        </div>
       </div>
     </main>
   );

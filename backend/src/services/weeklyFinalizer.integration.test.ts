@@ -20,7 +20,7 @@ let applyEarnToLeaderboard: typeof import("./leaderboardScoring.js").applyEarnTo
 let leaderboardKeysForWeek: typeof import("./leaderboardScoring.js").leaderboardKeysForWeek;
 let leaderboardRawScoresKeyForWeek: typeof import("./leaderboardScoring.js").leaderboardRawScoresKeyForWeek;
 let leaderboardTotalEarnedKeyForWeek: typeof import("./leaderboardScoring.js").leaderboardTotalEarnedKeyForWeek;
-let rankScoreForRawScore: typeof import("./leaderboardScoring.js").rankScoreForRawScore;
+let rankScoreForRawScore: typeof import("./rankScore.js").rankScoreForRawScore;
 
 async function cleanWeek(weekId: string) {
   await pgPool.query("DELETE FROM weekly_snapshots WHERE week_id = $1", [
@@ -30,7 +30,7 @@ async function cleanWeek(weekId: string) {
   await redis.del(`lock:weekly-finalize:${weekId}`);
 }
 
-async function seedLeaderboard(weekId: string, playerCount: number) {
+async function writeLeaderboardFixture(weekId: string, playerCount: number) {
   const pipeline = redis.pipeline();
   const now = Date.now();
   const leaderboardKey = leaderboardKeyForWeek(weekId);
@@ -106,8 +106,8 @@ describeWeeklyIntegration("weeklyFinalizer integration", () => {
       leaderboardKeysForWeek,
       leaderboardRawScoresKeyForWeek,
       leaderboardTotalEarnedKeyForWeek,
-      rankScoreForRawScore,
     } = await import("./leaderboardScoring.js"));
+    ({ rankScoreForRawScore } = await import("./rankScore.js"));
 
     await setupWeeklyTables();
     await cleanWeek(WEEK_ID);
@@ -122,49 +122,43 @@ describeWeeklyIntegration("weeklyFinalizer integration", () => {
     await Promise.allSettled([redis.quit(), pgPool.end()]);
   });
 
-  it(
-    "finalizes 50k Redis scores, repairs stuck finalizing rows, and cleans stale finalized Redis data",
-    async () => {
-      await seedLeaderboard(WEEK_ID, PLAYER_COUNT);
-      await pgPool.query(
-        "INSERT INTO weekly_snapshots (week_id, status) VALUES ($1, $2)",
-        [WEEK_ID, "finalizing"],
-      );
+  it("finalizes 50k Redis scores, repairs stuck finalizing rows, and cleans stale finalized Redis data", async () => {
+    await writeLeaderboardFixture(WEEK_ID, PLAYER_COUNT);
+    await pgPool.query(
+      "INSERT INTO weekly_snapshots (week_id, status) VALUES ($1, $2)",
+      [WEEK_ID, "finalizing"],
+    );
 
-      const result = await finalizeWeeklyLeaderboard(WEEK_ID);
-      const snapshot = await readSnapshot(WEEK_ID);
-      const playerSummary = await readPlayerSummary(WEEK_ID);
-      const redisCountAfterFinalize = await redis.zcard(
-        leaderboardKeyForWeek(WEEK_ID),
-      );
+    const result = await finalizeWeeklyLeaderboard(WEEK_ID);
+    const snapshot = await readSnapshot(WEEK_ID);
+    const playerSummary = await readPlayerSummary(WEEK_ID);
+    const redisCountAfterFinalize = await redis.zcard(
+      leaderboardKeyForWeek(WEEK_ID),
+    );
 
-      expect(result.status).toBe("finalized");
-      expect(result.playerCount).toBe(100);
-      expect(result.participantCount).toBe(PLAYER_COUNT);
-      expect(snapshot.status).toBe("finalized");
-      expect(snapshot.player_count).toBe(100);
-      expect(snapshot.participant_count).toBe(PLAYER_COUNT);
-      expect(playerSummary.count).toBe(100);
-      expect(playerSummary.min_rank).toBe(1);
-      expect(playerSummary.max_rank).toBe(100);
-      expect(Number(playerSummary.reward_sum)).toBe(result.distributedAmount);
-      expect(Number(snapshot.distributed_amount)).toBe(
-        result.distributedAmount,
-      );
-      expect(redisCountAfterFinalize).toBe(0);
+    expect(result.status).toBe("finalized");
+    expect(result.playerCount).toBe(100);
+    expect(result.participantCount).toBe(PLAYER_COUNT);
+    expect(snapshot.status).toBe("finalized");
+    expect(snapshot.player_count).toBe(100);
+    expect(snapshot.participant_count).toBe(PLAYER_COUNT);
+    expect(playerSummary.count).toBe(100);
+    expect(playerSummary.min_rank).toBe(1);
+    expect(playerSummary.max_rank).toBe(100);
+    expect(Number(playerSummary.reward_sum)).toBe(result.distributedAmount);
+    expect(Number(snapshot.distributed_amount)).toBe(result.distributedAmount);
+    expect(redisCountAfterFinalize).toBe(0);
 
-      const secondRun = await finalizeWeeklyLeaderboard(WEEK_ID);
-      expect(secondRun.status).toBe("already-finalized");
+    const secondRun = await finalizeWeeklyLeaderboard(WEEK_ID);
+    expect(secondRun.status).toBe("already-finalized");
 
-      await seedLeaderboard(WEEK_ID, 5);
-      expect(await redis.zcard(leaderboardKeyForWeek(WEEK_ID))).toBe(5);
+    await writeLeaderboardFixture(WEEK_ID, 5);
+    expect(await redis.zcard(leaderboardKeyForWeek(WEEK_ID))).toBe(5);
 
-      const thirdRun = await finalizeWeeklyLeaderboard(WEEK_ID);
-      expect(thirdRun.status).toBe("already-finalized");
-      expect(await redis.zcard(leaderboardKeyForWeek(WEEK_ID))).toBe(0);
-    },
-    60_000,
-  );
+    const thirdRun = await finalizeWeeklyLeaderboard(WEEK_ID);
+    expect(thirdRun.status).toBe("already-finalized");
+    expect(await redis.zcard(leaderboardKeyForWeek(WEEK_ID))).toBe(0);
+  }, 60_000);
 
   it("returns already-running while the Redis lock is held", async () => {
     const lockKey = `lock:weekly-finalize:${LOCK_WEEK_ID}`;

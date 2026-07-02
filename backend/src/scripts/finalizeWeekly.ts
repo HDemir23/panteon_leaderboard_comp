@@ -16,12 +16,12 @@ async function main() {
     return;
   }
 
-	  console.log(
-	    `[weekly] finalized ${result.weekId}: ` +
-	      `${result.playerCount} rewarded players, ` +
-	      `participants=${result.participantCount}, ` +
-	      `earned=${result.totalWeeklyEarned}, ` +
-	      `prizePool=${result.prizePoolAmount}, ` +
+  console.log(
+    `[weekly] finalized ${result.weekId}: ` +
+      `${result.playerCount} rewarded players, ` +
+      `participants=${result.participantCount}, ` +
+      `earned=${result.totalWeeklyEarned}, ` +
+      `prizePool=${result.prizePoolAmount}, ` +
       `distributed=${result.distributedAmount}, ` +
       `undistributed=${result.undistributedAmount}`,
   );

@@ -34,6 +34,7 @@ flowchart TD
 ## Design Notes
 
 - `POST /api/events/earn` validates the event and enqueues it instead of updating rankings inside the request.
+- The simulation producer queues bounded random earn events across a 2M-user id range. It does not preload zero-score users.
 - BullMQ keeps ingestion resilient while the worker processes earn events asynchronously.
 - Redis is the live leaderboard store. Ranking reads use `ZREVRANGE` and `ZREVRANK`.
 - Earn updates run through a Redis Lua script, so score updates, total counters and duplicate-event checks stay atomic.
@@ -55,6 +56,7 @@ flowchart TD
 - API server: Express routes and datastore connectivity checks.
 - Worker: BullMQ consumer for earn events.
 - Weekly scheduler: cron-driven finalizer with a Redis lock.
+- Simulation: a separate producer process keeps random earn events flowing through the same queue, Redis and Mongo path as real player events.
 - PostgreSQL setup script: creates weekly snapshot tables.
 
 ## Environment
@@ -66,6 +68,9 @@ MONGO_URL=mongodb://localhost:27017
 POSTGRES_URL=postgres://leaderboard:leaderboard@localhost:5432/leaderboard
 WEEKLY_LEADERBOARD_TIMEZONE=Europe/Istanbul
 WEEKLY_FINALIZE_CRON="5 0 * * 1"
+EARN_SIMULATION_ENABLED=true
+EARN_SIMULATION_INTERVAL_MS=5000
+EARN_SIMULATION_EVENTS_PER_TICK=25
 ```
 
 ## Scripts
@@ -76,8 +81,20 @@ npm run build
 npm test
 npm run dev
 npm run worker
+npm run worker:dev
+npm run simulate
+npm run simulate:dev
+npm run simulate:once
+npm run simulate:once:dev
 npm run weekly:setup
 npm run weekly:finalize
 ```
 
 Use `docker-compose up -d` to start Redis, PostgreSQL and MongoDB locally.
+Run `npm run worker:dev` and `npm run simulate:dev` in separate local terminals when you want live simulated traffic.
+
+Railway services should run the built production scripts after `npm run build`:
+
+- API: `npm run start`
+- Earn worker: `npm run worker`
+- Simulation producer: `npm run simulate`

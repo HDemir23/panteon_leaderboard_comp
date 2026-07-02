@@ -1,35 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { API_BASE_URL } from "../api";
-import type { LeaderboardRequestState, LeaderboardView } from "../types/leaderboard";
-
-function isLeaderboardView(value: unknown): value is LeaderboardView {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const candidate = value as Partial<LeaderboardView>;
-  return Array.isArray(candidate.topPlayers);
-}
+import { getLeaderboardView } from "../api";
+import type { LeaderboardRequestState } from "../types/leaderboard";
 
 async function loadLeaderboard(userId: string): Promise<LeaderboardRequestState> {
-  if (!userId) {
+  if (userId.trim().length === 0) {
     return { status: "error", message: "Missing user id" };
   }
 
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/leaderboard?userId=${encodeURIComponent(userId)}`,
-    );
-
-    if (!response.ok) {
-      throw new Error(`Request failed with status ${response.status}`);
-    }
-
-    const data: unknown = await response.json();
-
-    if (!isLeaderboardView(data)) {
-      throw new Error("Unexpected leaderboard response");
-    }
+    const data = await getLeaderboardView(userId);
 
     if (data.topPlayers.length === 0) {
       return { status: "empty" };
@@ -44,7 +23,7 @@ async function loadLeaderboard(userId: string): Promise<LeaderboardRequestState>
   }
 }
 
-export function useLeaderboard(userId: string) {
+export function useLeaderboard(userId: string, refreshMs = 5_000) {
   const [state, setState] = useState<LeaderboardRequestState>({
     status: "loading",
   });
@@ -57,16 +36,26 @@ export function useLeaderboard(userId: string) {
   useEffect(() => {
     let isActive = true;
 
-    void loadLeaderboard(userId).then((nextState) => {
+    const refresh = async () => {
+      const nextState = await loadLeaderboard(userId);
+
       if (isActive) {
         setState(nextState);
       }
-    });
+    };
+
+    void refresh();
+    const interval =
+      refreshMs > 0 ? window.setInterval(refresh, refreshMs) : null;
 
     return () => {
       isActive = false;
+
+      if (interval !== null) {
+        window.clearInterval(interval);
+      }
     };
-  }, [userId]);
+  }, [refreshMs, userId]);
 
   return { state, retry: fetchLeaderboard };
 }

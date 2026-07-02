@@ -26,6 +26,7 @@ flowchart TD
 ## Component Notes
 
 - `App.tsx` owns the selected user and passes request state into the leaderboard.
+- `App.tsx` keeps the UI read-only: leaderboard, recent Mongo events and finalized PostgreSQL weeks.
 - `useLeaderboard` keeps API loading, success, empty and error states isolated from UI rendering.
 - `Leaderboard` is prop-driven and renders only the view model it receives.
 - `PlayerRow` is shared by the top list and current user context to keep row styling consistent.

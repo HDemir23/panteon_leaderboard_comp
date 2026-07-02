@@ -1,12 +1,17 @@
 import { redis } from "../config/redis.js";
 import { leaderboardKeyForWeek } from "./leaderboardWeek.js";
 import {
-  displayScoreFromRankScore,
   getRawScoresForUsers,
   leaderboardTotalEarnedKeyForWeek,
-  parseScoredLeaderboardMembers,
 } from "./leaderboardScoring.js";
-import { calculatePrizePool, calculateWeeklyRewards } from "./rewardCalculator.js";
+import {
+  calculatePrizePool,
+  calculateWeeklyRewards,
+} from "./rewardCalculator.js";
+import {
+  displayScoreFromRankScore,
+  parseScoredLeaderboardMembers,
+} from "./rankScore.js";
 
 export interface PlayerRank {
   userId: string;
@@ -118,12 +123,12 @@ export async function getLeaderboardView(
     end,
     "WITHSCORES",
   );
-  const contextPlayers = (await buildPlayerRanks(weekId, contextRaw, start)).map(
-    (player) => ({
-      ...player,
-      estimatedRewardAmount: topRewardByUserId.get(player.userId) ?? null,
-    }),
-  );
+  const contextPlayers = (
+    await buildPlayerRanks(weekId, contextRaw, start)
+  ).map((player) => ({
+    ...player,
+    estimatedRewardAmount: topRewardByUserId.get(player.userId) ?? null,
+  }));
 
   const selfIndex = contextPlayers.findIndex((p) => p.userId === userId);
 
