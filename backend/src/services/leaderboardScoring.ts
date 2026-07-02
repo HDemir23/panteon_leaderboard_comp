@@ -18,6 +18,12 @@ export interface LeaderboardEarnResult {
   rawScore: number;
 }
 
+export interface ScoredLeaderboardMember {
+  userId: string;
+  rankScore: number;
+  rank: number;
+}
+
 const APPLY_EARN_SCRIPT = `
   local leaderboardKey = KEYS[1]
   local rawScoresKey = KEYS[2]
@@ -93,6 +99,23 @@ export function displayScoreFromRankScore(rankScore: number): number {
   }
 
   return Math.floor(rankScore);
+}
+
+export function parseScoredLeaderboardMembers(
+  raw: string[],
+  rankOffset = 0,
+): ScoredLeaderboardMember[] {
+  const members: ScoredLeaderboardMember[] = [];
+
+  for (let i = 0; i < raw.length; i += 2) {
+    members.push({
+      userId: raw[i],
+      rankScore: Number(raw[i + 1]),
+      rank: rankOffset + members.length + 1,
+    });
+  }
+
+  return members;
 }
 
 export async function applyEarnToLeaderboard(

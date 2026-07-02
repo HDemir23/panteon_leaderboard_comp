@@ -7,6 +7,7 @@ import {
   displayScoreFromRankScore,
   getRawScoresForUsers,
   leaderboardTotalEarnedKeyForWeek,
+  parseScoredLeaderboardMembers,
 } from "./leaderboardScoring.js";
 import {
   calculatePrizePool,
@@ -44,31 +45,22 @@ async function parseSnapshotPlayers(
   weekId: string,
   raw: string[],
 ): Promise<RewardCandidate[]> {
-  const userIds: string[] = [];
-  const rankScores: number[] = [];
-
-  for (let i = 0; i < raw.length; i += 2) {
-    userIds.push(raw[i]);
-    rankScores.push(Number(raw[i + 1]));
-  }
-
+  const members = parseScoredLeaderboardMembers(raw);
+  const userIds = members.map((member) => member.userId);
   const rawScores = await getRawScoresForUsers(weekId, userIds);
-  const players: RewardCandidate[] = [];
 
-  for (let i = 0; i < userIds.length; i++) {
-    const rawScore = rawScores[i];
+  return members.map((member, index) => {
+    const rawScore = rawScores[index];
 
-    players.push({
-      userId: userIds[i],
+    return {
+      userId: member.userId,
       score:
         rawScore === null
-          ? displayScoreFromRankScore(rankScores[i])
+          ? displayScoreFromRankScore(member.rankScore)
           : rawScore,
-      rank: i + 1,
-    });
-  }
-
-  return players;
+      rank: member.rank,
+    };
+  });
 }
 
 async function releaseLock(lockKey: string, token: string) {

@@ -5,7 +5,8 @@ import { getCurrentWeekId } from "../services/leaderboardWeek.js";
 export const leaderboardRouter = Router();
 
 leaderboardRouter.get("/leaderboard", async (req: Request, res: Response) => {
-  const userId = req.query.userId as string;
+  const rawUserId = req.query.userId;
+  const userId = typeof rawUserId === "string" ? rawUserId.trim() : "";
 
   if (!userId) {
     return res.status(400).json({ error: "userId query param is required" });

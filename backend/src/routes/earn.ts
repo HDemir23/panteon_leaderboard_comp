@@ -5,11 +5,12 @@ import { earnQueue } from "../queues/earnQueues.js";
 export const earnRouter = Router();
 
 earnRouter.post("/events/earn", async (req: Request, res: Response) => {
-  const { userId, amount } = req.body;
+  const rawUserId = req.body?.userId;
+  const amount = req.body?.amount;
+  const userId = typeof rawUserId === "string" ? rawUserId.trim() : "";
 
   if (
-    typeof userId !== "string" ||
-    userId.trim().length === 0 ||
+    userId.length === 0 ||
     typeof amount !== "number" ||
     !Number.isInteger(amount) ||
     amount <= 0
@@ -21,13 +22,12 @@ earnRouter.post("/events/earn", async (req: Request, res: Response) => {
 
   try {
     const eventId = randomUUID();
-    const normalizedUserId = userId.trim();
 
     await earnQueue.add(
       "earn-event",
       {
         eventId,
-        userId: normalizedUserId,
+        userId,
         amount,
         earnedAt: Date.now(),
       },

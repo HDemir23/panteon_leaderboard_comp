@@ -9,10 +9,10 @@ import {
 export const weeklyRouter = Router();
 
 weeklyRouter.post("/weekly/finalize", async (req: Request, res: Response) => {
-  const requestedWeekId = req.body?.weekId;
+  const rawWeekId = req.body?.weekId;
   const weekId =
-    typeof requestedWeekId === "string" && requestedWeekId.trim().length > 0
-      ? requestedWeekId.trim()
+    typeof rawWeekId === "string" && rawWeekId.trim().length > 0
+      ? rawWeekId.trim()
       : getCurrentWeekId();
 
   try {

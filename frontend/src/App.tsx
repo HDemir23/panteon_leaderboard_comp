@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { API_BASE_URL } from "./api";
+import {
+  addLeaderboardPoints,
+  finalizeCurrentWeek,
+  getWeeklySnapshot,
+  seedDemoLeaderboard,
+} from "./api";
 import { DemoControls } from "./components/DemoControls";
 import { Leaderboard } from "./components/Leaderboard";
 import { SnapshotPanel } from "./components/SnapshotPanel";
@@ -7,7 +12,13 @@ import { useLeaderboard } from "./hooks/useLeaderboard";
 import type { WeeklySnapshot } from "./types/leaderboard";
 import "./App.css";
 
-const DEMO_USER_ID = "user:9";
+function positiveInteger(value: number, fallback: number): number {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.max(1, Math.floor(value));
+}
 
 function App() {
   const [userNumber, setUserNumber] = useState(19);
@@ -25,7 +36,7 @@ function App() {
     setIsSnapshotLoading(true);
 
     try {
-      setSnapshot(await fetchSnapshot());
+      setSnapshot(await getWeeklySnapshot());
     } catch (err) {
       setMessage(
         err instanceof Error ? err.message : "Failed to load weekly snapshot",
@@ -38,7 +49,7 @@ function App() {
   useEffect(() => {
     let isActive = true;
 
-    void fetchSnapshot()
+    void getWeeklySnapshot()
       .then((nextSnapshot) => {
         if (isActive) {
           setSnapshot(nextSnapshot);
@@ -67,19 +78,7 @@ function App() {
     setMessage(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/events/earn`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: currentUserId,
-          amount: pointsToAdd,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Add points failed with ${response.status}`);
-      }
-
+      await addLeaderboardPoints(currentUserId, pointsToAdd);
       setMessage(
         `Queued ${pointsToAdd.toLocaleString()} points for ${currentUserId}`,
       );
@@ -98,19 +97,9 @@ function App() {
     setMessage(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/weekly/finalize`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Finalize failed with ${response.status}`);
-      }
-
-      const result: { status: string; weekId: string } = await response.json();
+      const result = await finalizeCurrentWeek();
       setMessage(`Finalize result: ${result.status} ${result.weekId}`);
-      const finalizedSnapshot = await fetchSnapshot(result.weekId);
+      const finalizedSnapshot = await getWeeklySnapshot(result.weekId);
       setSnapshot(finalizedSnapshot);
       await retry();
     } catch (err) {
@@ -125,18 +114,7 @@ function App() {
     setMessage(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/demo/seed`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Seed failed with ${response.status}`);
-      }
-
-      const result: { weekId: string; playerCount: number } =
-        await response.json();
+      const result = await seedDemoLeaderboard();
       setMessage(
         `Seeded ${result.playerCount.toLocaleString()} players for ${result.weekId}`,
       );

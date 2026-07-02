@@ -162,23 +162,21 @@ function LeaderboardComponent({
           <p className="lb-header__eyebrow">Weekly leaderboard</p>
           <h1 className="lb-header__title">Top players</h1>
         </div>
-        {data && <p className="lb-header__meta">{data.weekId}</p>}
+        <p className="lb-header__meta">{data.weekId}</p>
       </div>
 
-      {data && (
-        <div className="lb-metrics">
-          <div className="lb-metric">
-            <p className="lb-metric__label">Prize pool</p>
-            <p className="lb-metric__value">{formatScore(data.prizePoolAmount)}</p>
-          </div>
-          <div className="lb-metric">
-            <p className="lb-metric__label">Weekly earned</p>
-            <p className="lb-metric__value">
-              {formatScore(data.totalWeeklyEarned)}
-            </p>
-          </div>
+      <div className="lb-metrics">
+        <div className="lb-metric">
+          <p className="lb-metric__label">Prize pool</p>
+          <p className="lb-metric__value">{formatScore(data.prizePoolAmount)}</p>
         </div>
-      )}
+        <div className="lb-metric">
+          <p className="lb-metric__label">Weekly earned</p>
+          <p className="lb-metric__value">
+            {formatScore(data.totalWeeklyEarned)}
+          </p>
+        </div>
+      </div>
 
       <div className="lb-list-header" aria-hidden="true">
         <span>Rank</span>

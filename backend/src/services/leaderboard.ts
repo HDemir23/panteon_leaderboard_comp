@@ -4,6 +4,7 @@ import {
   displayScoreFromRankScore,
   getRawScoresForUsers,
   leaderboardTotalEarnedKeyForWeek,
+  parseScoredLeaderboardMembers,
 } from "./leaderboardScoring.js";
 import { calculatePrizePool, calculateWeeklyRewards } from "./rewardCalculator.js";
 
@@ -45,38 +46,28 @@ function withEstimatedRewards(
   }));
 }
 
-async function parseZrangeResult(
+async function buildPlayerRanks(
   weekId: string,
   raw: string[],
   rankOffset: number,
 ): Promise<PlayerRank[]> {
-  // raw is a flat array: [member, score, member, score, ...]
-  const userIds: string[] = [];
-  const rankScores: number[] = [];
-
-  for (let i = 0; i < raw.length; i += 2) {
-    userIds.push(raw[i]);
-    rankScores.push(Number(raw[i + 1]));
-  }
-
+  const members = parseScoredLeaderboardMembers(raw, rankOffset);
+  const userIds = members.map((member) => member.userId);
   const rawScores = await getRawScoresForUsers(weekId, userIds);
-  const players: PlayerRank[] = [];
 
-  for (let i = 0; i < userIds.length; i++) {
-    const rawScore = rawScores[i];
+  return members.map((member, index) => {
+    const rawScore = rawScores[index];
 
-    players.push({
-      userId: userIds[i],
+    return {
+      userId: member.userId,
       score:
         rawScore === null
-          ? displayScoreFromRankScore(rankScores[i])
+          ? displayScoreFromRankScore(member.rankScore)
           : rawScore,
-      rank: rankOffset + i + 1, // convert 0-indexed position to 1-indexed rank
+      rank: member.rank,
       estimatedRewardAmount: null,
-    });
-  }
-
-  return players;
+    };
+  });
 }
 
 export async function getLeaderboardView(
@@ -94,7 +85,7 @@ export async function getLeaderboardView(
     totalWeeklyEarnedRaw === null ? 0 : Number(totalWeeklyEarnedRaw);
   const prizePoolAmount = calculatePrizePool(totalWeeklyEarned);
   const topPlayers = withEstimatedRewards(
-    await parseZrangeResult(weekId, topRaw, 0),
+    await buildPlayerRanks(weekId, topRaw, 0),
     prizePoolAmount,
   );
   const topRewardByUserId = new Map(
@@ -127,7 +118,7 @@ export async function getLeaderboardView(
     end,
     "WITHSCORES",
   );
-  const contextPlayers = (await parseZrangeResult(weekId, contextRaw, start)).map(
+  const contextPlayers = (await buildPlayerRanks(weekId, contextRaw, start)).map(
     (player) => ({
       ...player,
       estimatedRewardAmount: topRewardByUserId.get(player.userId) ?? null,
@@ -135,6 +126,11 @@ export async function getLeaderboardView(
   );
 
   const selfIndex = contextPlayers.findIndex((p) => p.userId === userId);
+
+  if (selfIndex === -1) {
+    return { ...baseView, currentUserContext: null };
+  }
+
   const self = contextPlayers[selfIndex];
   const above = contextPlayers.slice(0, selfIndex);
   const below = contextPlayers.slice(selfIndex + 1);

@@ -1,8 +1,8 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "type": "module",
   "scripts": {
     "test": "npm run build && NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
     "test:weekly": "npm run build && WEEKLY_INTEGRATION=1 NODE_OPTIONS=--experimental-vm-modules jest --runInBand --runTestsByPath dist/services/weeklyFinalizer.integration.test.js",
@@ -14,10 +14,6 @@
     "weekly:finalize": "tsx src/scripts/finalizeWeekly.ts",
     "worker": "tsx watch src/workers/earnWorker.ts"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
