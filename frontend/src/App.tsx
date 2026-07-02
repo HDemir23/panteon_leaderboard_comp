@@ -7,27 +7,7 @@ import { useLeaderboard } from "./hooks/useLeaderboard";
 import type { WeeklySnapshot } from "./types/leaderboard";
 import "./App.css";
 
-function positiveInteger(value: number, fallback: number): number {
-  if (!Number.isFinite(value)) {
-    return fallback;
-  }
-
-  return Math.max(1, Math.floor(value));
-}
-
-async function fetchSnapshot(weekId?: string): Promise<WeeklySnapshot | null> {
-  const path = weekId
-    ? `/weekly/snapshots/${encodeURIComponent(weekId)}`
-    : "/weekly/snapshots/latest";
-  const response = await fetch(`${API_BASE_URL}${path}`);
-
-  if (!response.ok) {
-    throw new Error(`Snapshot request failed with ${response.status}`);
-  }
-
-  const data: { snapshot: WeeklySnapshot | null } = await response.json();
-  return data.snapshot;
-}
+const DEMO_USER_ID = "user:9";
 
 function App() {
   const [userNumber, setUserNumber] = useState(19);
